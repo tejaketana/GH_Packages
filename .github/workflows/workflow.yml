@@ -71,6 +71,7 @@ jobs:
         tag_name: ${{ needs.build.outputs.Version }}
         release_name: Release ${{ needs.build.outputs.Version }}
     - name: Create Release
+      id: create_release
       if: needs.build.outputs.CommitsSinceVersionSource > 0 #Only release if there has been a commit/version change
       uses: ncipollo/release-action@v1
       with:
@@ -78,3 +79,14 @@ jobs:
         name: Release ${{ needs.build.outputs.Version }}
         artifacts: "nugetPackage/*"
         token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Rollback Release
+      if: failure() && steps.create_release.outputs.id != ''
+      uses: author/action-rollback@stable
+      with:
+        # Using a known release ID
+        id: ${{ steps.create_release.id }}
+        # Using a tag name
+        tag: ${{ steps.autotagger.outputs.tagname }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
